@@ -80,7 +80,6 @@ class MULTIPROCESS:
 class NatureSpider:
 
     def __init__(self):
-        T = Tools()
         self.__conf__()
         pass
 
@@ -89,11 +88,11 @@ class NatureSpider:
         configuration
         '''
         ####### ¹Ø¼ü×Ö #######
-        self.keyword = 'global'
+        self.keyword = 'global+warming'
 
         ####### pages #######
         self.page_start = 1
-        self.page_end = 5
+        self.page_end = 300
 
         ####### threads #######
         self.threads = 20
@@ -104,29 +103,48 @@ class NatureSpider:
 
         pass
 
+    def kernel_get_articles_url(self,params):
+
+        attempts = 0
+        while 1:
+            try:
+                url_text_dir,page = params
+                product_url = 'https://www.nature.com/search?q={}&page={}'.format(self.keyword, page)
+                fname = hashlib.md5(product_url).hexdigest()
+                # print product_url
+                # print fname
+                f = url_text_dir + '{}.txt'.format(fname)
+                if os.path.isfile(f):
+                    return None
+                request = urllib2.Request(product_url)
+                response = urllib2.urlopen(request)
+                body = response.read()
+                fw = open(f, 'w')
+                p = re.findall('<a href="/articles/.*? itemprop=', body)
+                for i in p:
+                    article = i.split('"')[1]
+                    url_i = 'https://www.nature.com{}'.format(article)
+                    fw.write(url_i + '\n')
+                fw.close()
+                success = 1
+                attempts = 0
+            except Exception as e:
+                print e
+                sleep(10)
+                attempts += 1
+                success = 0
+            if success == 1 or attempts >= 10:
+                break
+        pass
 
     def get_articles_url(self):
         url_text_dir = this_root+'urls\\{}\\'.format(self.keyword)
         Tools().mk_dir(url_text_dir,force=True)
+        params = []
         for page in range(self.page_start,self.page_end + 1):
-            product_url = 'https://www.nature.com/search?q={}&order=relevance&journal=nature%2Cnclimate%2Cncomms%2Csrep&page={}'.format(self.keyword,page)
-            print page
-            fname = hashlib.md5(product_url).hexdigest()
-            # print product_url
-            # print fname
-            f = url_text_dir + '{}.txt'.format(fname)
-            if os.path.isfile(f):
-                continue
-            request = urllib2.Request(product_url)
-            response = urllib2.urlopen(request)
-            body = response.read()
-            fw = open(f, 'w')
-            p = re.findall('<a href="/articles/.*? itemprop=', body)
-            for i in p:
-                article = i.split('"')[1]
-                url_i = 'https://www.nature.com{}'.format(article)
-                fw.write(url_i+'\n')
-            fw.close()
+            params.append([url_text_dir,page])
+
+        MULTIPROCESS(self.kernel_get_articles_url,params).run(process=20,process_or_thread='t',desc='fetching search pages...')
 
 
     def get_article_figs_url(self,url):
@@ -198,8 +216,8 @@ class NatureSpider:
                 success = 1
                 attempts = 0
             except Exception as e:
-                print e
-                print 'sleep 10 s'
+                # print e
+                # print 'sleep 10 s'
                 success = 0
                 attempts += 1
                 sleep(10)
@@ -224,10 +242,10 @@ class NatureSpider:
             article_title_new = hashlib.md5(article_title).hexdigest()
             save_path = this_root + 'jpg\\{}\\{}\\'.format(self.keyword, article_title_new)
             Tools().mk_dir(save_path, force=True)
-            f_txt = save_path+'fname.txt'
-            fw_txt = open(f_txt,'w')
-            fw_txt.write(article_title)
-            fw_txt.close()
+        f_txt = save_path+'article_title.txt'
+        fw_txt = open(f_txt,'w')
+        fw_txt.write(article_title)
+        fw_txt.close()
 
         for url in figs_url:
             # print url

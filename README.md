@@ -7,6 +7,7 @@
 
 依赖第三方库：
 tqdm,requests
+python 2.7
 ## 1. 获取Nature文章链接 ##
 定义搜索关键词，搜索页数范围，并行下载数量
 关键词要用+分隔，比如 global+drought
